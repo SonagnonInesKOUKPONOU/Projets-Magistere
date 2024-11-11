@@ -1,0 +1,296 @@
+---
+title: '**EXAM PROJECT**'
+author: "Sonagnon KOUKPONOU & Noelie KOOVI"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+fontsize: 10pt
+geometry: margin=0.2in
+---
+
+# [**What are the factors that influence the recurrence of thyroid cancer?**]{style="color:blue"}
+
+## **Introduction**
+
+Our work focused on the database "[**Differentiated Thyroid Cancer Recurrence**](https://archive.ics.uci.edu/dataset/915/differentiated+thyroid+cancer+recurrence)". It is a database containing 13 clinicopathological characteristics and whose objective is to determine the factors that cause thyroid cancer to recur and the likelihood of this cancer coming back. We have selected the following variables using the literature review:
+
+-   ***Recurred*** : reccurrence of cancer or not (dependant variable)
+
+-   ***Age*** : patient'old
+
+-   ***Gender*** : Gender of Patient
+
+-   ***Smoking*** : the patient currently smoke or not
+
+-   ***Hx_Smoking*** : historic of smoking (in the past)
+
+-   ***Hx Radiothreapy*** : historic of radiothreapy
+
+-   ***Adenopathy*** : Enlargement, painful or not, of the size of a lymph node
+
+-   ***Thyroid function*** : type of function thyroid
+
+#### Library used
+
+```{r}
+library(tidyverse)
+library(gridExtra) 
+library(dplyr) 
+library(naniar) 
+library(ggplot2)
+```
+
+```{r}
+access_path <- "C:/Users/koukp/Documents/Projet Intro R/"
+
+data_thyroid <- read_csv(paste0(access_path, "Thyroid_Diff.csv")) 
+data_thyroid
+
+```
+
+## **Data pre-processing**
+
+Now we select variables
+
+```{r, results='hide'}
+data_thyroid1 <- data_thyroid %>%
+  select("Recurred", "Gender", "Age", "Smoking","Hx Smoking","Hx Radiothreapy", "Adenopathy","Thyroid Function")
+```
+
+```{r}
+# What is the structure of the data?
+str(data_thyroid1)
+```
+
+```{r}
+##Variable: "Recurred"
+data_thyroid1$Recurred_num <- ifelse(data_thyroid1$Recurred== "Yes", 1, 0)
+data_thyroid1$Recurred_num <- factor(data_thyroid1$Recurred_num)
+```
+
+```{r}
+str(data_thyroid1$Recurred_num)
+```
+
+### Analysis of missing values
+
+```{r, fig.width = 6, fig.height = 3}
+# Missing values
+proportion_missing_values <- function (data) {   
+nb_missing_value <- sapply(data_thyroid1, function(x) sum(is.na(x)))
+proportion_missing <- nb_missing_value / nrow(data_thyroid1)
+result <-data.frame(Number=nb_missing_value , Proportion= proportion_missing )
+return(result)
+}
+#Application with our database
+result <- proportion_missing_values (data_thyroid1)
+result 
+
+# Affichage du graphique des valeurs manquantes avec texte réduit
+vis_miss(data_thyroid1)
+```
+
+We can see that our database "data_thyroid1" does not contain any missing values.
+
+## **Univariate Analysis**
+
+### Analysis of distributions for the quantitative variable "Age"
+
+```{r, fig.width = 3, fig.height = 3}
+hist(data_thyroid1$Age, 
+     main = "Distribution of Patient's Age", 
+     xlab = "Age", 
+     col = "blue", 
+     freq = FALSE)
+lines(density(data_thyroid1$Age), 
+      col = "red", 
+      lwd = 2)
+```
+
+The distribution appears to be asymmetrical, slightly tilted to the right, with a higher concentration of patients in the 25 to 40 age group. Density decreases after age 45, so it can be said that older patients are less numerous in this dataset.
+
+### Outlier Checking for the Variable Age
+
+```{r, fig.width = 4, fig.height = 3}
+boxplot(data_thyroid1$Age, main = "Boxplot of Age", ylab = "Age")
+```
+
+We can see that for our quantitative variable alone, there are no outliers. It can be seen that 28.2% of patients had recurrence of thyroid cancer while 71.8% did not recur.
+
+### Qualitative variables
+
+#### **variable 'Recurred'** (goal)
+
+```{r, fig.width = 6, fig.height = 3}
+recurrence <- table(data_thyroid1$Recurred_num)
+proportion_recurred <- round(prop.table(recurrence) * 100, 1)
+labels <- paste(names(recurrence), "\n", proportion_recurred, "%", sep = "")
+pie(proportion_recurred, labels = labels, main = "Répartition recurrence of Thyroid", col = c("blue", "yellow" ))
+```
+
+#### **Others Explanatory variables**
+
+```{r, fig.width = 5, fig.height = 2.5}
+#Function to create a barplot of proportion with values
+barplot_proportion <- function(variable, data, title) {
+  table_var <- table(data[[variable]])
+  prop_table <- prop.table(table_var)
+  bp <- barplot(prop_table, main = title, xlab = variable, col = rainbow(length(prop_table)), ylim = c(0, max(prop_table) + 0.1))
+  
+  #Add values to the bar
+  text(bp, prop_table + 0.02, round(prop_table*100, 1), cex = 0.8, pos = 3)
+}
+# Barplot For 'Gender'
+barplot_proportion("Gender", data_thyroid1, "Proportion of Gender")
+
+# Barplot For 'Smoking'
+barplot_proportion("Smoking", data_thyroid1, "Proportion of Smoking")
+
+# Barplot For 'Hx_Smoking'
+barplot_proportion("Hx Smoking", data_thyroid1, "Proportion of Hx Smoking")
+
+## Barplot For 'Hx radiothreapy'
+barplot_proportion("Hx Radiothreapy", data_thyroid1, "Proportion of Hx Radiothreapy")
+
+## Barplot For 'Thyroid Function'
+barplot_proportion("Thyroid Function", data_thyroid1, "Proportion of Thyroid Function")
+
+## Barplot For 'Adenopathy'
+barplot_proportion("Adenopathy", data_thyroid1, "Proportion of Adenopathy")
+```
+
+For gender, for example, we find that 81.5% of people with thyroid disease are women and only 18.5% are men. For the smoker variable, we find that 12.8% of people with thyroid disease still smoke and only 87.2%do not smoke. For the variable "Hx smoking" we find that 7.3% of people with thyroid disease still smoked in the past and only 92.7% did not smoke. For the variable "Hx radiothreapy" it was found that 1.8% of patients had undergone radiotherapy and 98.2% had not had recourse. For the variable "Proportion of thyroid function" the majority of patient are Euthyroid.
+
+## **Bivariate analysis**
+
+```{r}
+# the qualitative variables must be of the right type
+data_thyroid1$Gender <- factor(data_thyroid1$Gender, ordered = TRUE)
+data_thyroid1$Smoking <- factor(data_thyroid1$Smoking, ordered = TRUE)
+data_thyroid1$`Hx Smoking` <- factor(data_thyroid1$`Hx Smoking`, ordered = TRUE)
+data_thyroid1$`Hx Radiothreapy` <- factor(data_thyroid1$`Hx Radiothreapy`, ordered = TRUE)
+data_thyroid1$`Thyroid Function` <- factor(data_thyroid1$`Thyroid Function`, ordered = TRUE)
+data_thyroid1$Adenopathy <- factor(data_thyroid1$Adenopathy, ordered = TRUE)
+```
+
+```{r}
+# Create barplots for each qualitative variable in relation to recidivism
+##For do the bivariate barplots let's create another base where we select the variables
+data_thyroid2 <- data_thyroid1 %>%
+  select( "Gender", "Smoking","Hx Smoking","Hx Radiothreapy", "Adenopathy","Recurred_num")
+
+
+barplot_plots <- lapply(names(data_thyroid2)[sapply(data_thyroid2, is.factor)],
+                        function(variable) {
+                          ggplot( data_thyroid2, aes(x = factor(Recurred_num), fill = .data[[variable]])) +
+                            geom_bar(position = "fill") +
+                            labs(title = paste(variable, "by Recurrence"),
+                                 x = "Recurred_num",
+                                 y = "Proportion") +
+                            theme_minimal() +
+                            scale_fill_brewer(palette = "Set1")
+                        })
+# Display barplots in a grid (2 per row)
+do.call(grid.arrange, c(barplot_plots, ncol = 2))
+```
+
+**Interpretation**: A slight increase in the proportion of smokers in the recurrent group could indicate a potential association between smoking and recurrence. Certain types of lymphadenopathy, particularly bilateral and extensive, appear more frequently in recurrent patients, suggesting that they may be risk factors. Finally, regarding gender, smoking history and radiotherapy, it can be said that these factors do not seem to have a significant relationship with recurrence in this sample.
+
+### **Statistical relationship between variables**
+
+#### Qualitative variables
+
+#### Hypothesis:
+
+HO: The two variables are independent
+
+H1: the two variables are dependent; alpha=5%
+
+#### Test KHI 2:
+
+The KHI 2 test is done on variables whose modalities are greater than 5
+
+```{r}
+# Creating the table for test results
+results <- data.frame(Variable = character(), P_value = numeric())
+
+# Qualitatives variables
+variables_qualitatives <- c("Gender", "Smoking", "Hx Smoking", "Recurred_num")
+
+for (var in variables_qualitatives) {
+  # Creating the Contingency Table
+  contingency_table <- table(data_thyroid1[[var]], data_thyroid1$Recurred_num)
+  
+  # Test of KHI 2
+  chi_test <- chisq.test(contingency_table)
+  
+  # Add results to table
+  results <- rbind(results, data.frame(Variable = var, P_value = chi_test$p.value))
+}
+
+# Displaying results
+print(results)                      
+```
+
+**Interpretation**: All p-values are below 5%. We reject HO. so the variables "Gender","Smoking","Hx Smoking" are related to the dependent variable "Recurred_num".
+
+#### Fisher test:
+
+The fisher test is done on variables whose modalities are less than 5
+
+```{r}
+# Creating the table for test results
+results <- data.frame(Variable = character(), P_value = numeric())
+
+# Qualitative variables
+variables_qualitatives <- c("Hx Radiothreapy", "Adenopathy", "Thyroid Function", "Recurred_num")
+
+for (var in variables_qualitatives) {
+  # Creating the Contingency Table
+  contingency_table <- table(data_thyroid1[[var]], data_thyroid1$Recurred_num)
+  
+  # Test of Fisher's exact test
+  fisher_test <- fisher.test(contingency_table)
+  
+  # Add results to table
+  results <- rbind(results, data.frame(Variable = var, P_value = fisher_test$p.value))
+}
+# Displaying results
+print(results)
+```
+
+**Interpretation:** All p-values are below 5%. We reject HO. so the variables "Adenopathy","Thyroid function","Hx radiothreapy" are related to the dependent variable "Recurred_num".
+
+### Quantitative variable "Age"
+
+#### ANOVA Test
+
+```{r}
+ #ANOVA
+anova_result <- aov(Age ~ Recurred_num, data = data_thyroid1)
+# Afficher les résultats de l'ANOVA
+summary(anova_result)
+```
+
+**Interpretation**: p-value\< 5% There is a link between age and the recurrence of thyroid cancer
+
+**Since our dependent variable is qualitative, the OLS are not suitable. Logistic regression models are more appropriate**
+
+#### Modèle Logit
+
+```{r, fig.width = 6, fig.height = 2.5}
+modele_logistique <- glm(Recurred_num ~ Age + Gender + `Hx Smoking` + `Hx Radiothreapy` + `Thyroid Function` +`Adenopathy` ,
+                         data = data_thyroid1,
+                         family = binomial(link = "logit"))
+# Summary
+summary(modele_logistique)
+```
+
+**Interpretation:** Overall, age and gender appear to be the only significant variables associated with recurrence in this model because p-value\<5%), while smoking history, radiation therapy history, thyroid function, and lymphadenopathy did not show a significant association with recurrence. This could suggest that other factors not included in the model may be more relevant in predicting recurrence.
+
+## **Conclusion**
+
+Gender and age are the only factors that really influence thyroid cancer recurrence in our work.
